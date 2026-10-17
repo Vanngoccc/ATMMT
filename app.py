@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import sys
+import time
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from detector import sqli_detector
 
@@ -8,9 +9,22 @@ app = Flask(__name__)
 app.secret_key = "do_an_atmmt_sqli_2026"
 DB_PATH = "database.db"
 
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    # Đăng ký hàm SLEEP(s) cho SQLite để demo kịch bản Time-based Blind SQLi
+    def sqlite_sleep(seconds):
+        try:
+            sec = min(max(float(seconds), 0), 3.0)
+            time.sleep(sec)
+        except Exception:
+            pass
+        return 1
+    conn.create_function("SLEEP", 1, sqlite_sleep)
+    return conn
+
 # Hàm khởi tạo database SQLite
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Bảng tài khoản người dùng
@@ -71,7 +85,7 @@ def init_db():
 def save_log(log_data):
     if not log_data:
         return
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     for threat in log_data['threats']:
@@ -123,12 +137,14 @@ def index():
             save_log(log_data)
             return render_template('blocked.html', log=log_data, payload=query), 403
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     products = []
     sql_executed = ""
     sql_error = ""
+    exec_time_ms = 0
     
+    t0 = time.perf_counter()
     if query:
         if security_mode == 'VULNERABLE':
             # Chế độ dính lỗi SQLi: Nối chuỗi trực tiếp
@@ -148,9 +164,10 @@ def index():
         sql_executed = "SELECT * FROM products"
         cursor.execute(sql_executed)
         products = cursor.fetchall()
+    exec_time_ms = round((time.perf_counter() - t0) * 1000, 1)
         
     conn.close()
-    return render_template('index.html', products=products, query=query, sql_executed=sql_executed, sql_error=sql_error)
+    return render_template('index.html', products=products, query=query, sql_executed=sql_executed, sql_error=sql_error, exec_time_ms=exec_time_ms)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -168,7 +185,7 @@ def login():
             save_log(log_data)
             return render_template('blocked.html', log=log_data, payload=f"User: {username} | Pass: {password}"), 403
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     user = None
     sql_executed = ""
@@ -195,8 +212,8 @@ def login():
         session['username'] = user[1]
         session['fullname'] = user[3]
         session['role'] = user[4]
-        flash(f"Đăng nhập thành công! Xin chào {user[3]}", "success")
-        return redirect(url_for('index'))
+        flash(f"Đăng nhập thành công! Tài khoản: {user[1]} ({user[3]} - Quyền: {user[4]})", "success")
+        return render_template('login.html', username=username, sql_executed=sql_executed, sql_error=sql_error, logged_user=user)
     else:
         flash("Tài khoản hoặc mật khẩu không chính xác!", "danger")
         return render_template('login.html', username=username, sql_executed=sql_executed, sql_error=sql_error)
@@ -205,11 +222,11 @@ def login():
 def logout():
     session.clear()
     flash("Đã đăng xuất tài khoản.", "info")
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 @app.route('/admin')
 def admin():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("SELECT * FROM attack_logs ORDER BY id DESC LIMIT 50")

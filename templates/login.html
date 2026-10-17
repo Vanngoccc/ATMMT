@@ -5,8 +5,8 @@
 {% block head %}
 <style>
     .login-wrap {
-        max-width: 420px;
-        margin: 40px auto 0;
+        max-width: 460px;
+        margin: 28px auto 0;
     }
     .field { margin-bottom: 12px; }
     .field label {
@@ -17,24 +17,56 @@
         margin-bottom: 5px;
         letter-spacing: 0.3px;
     }
-    .hint-block {
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--text-muted);
-        border-left: 2px solid var(--border);
-        padding: 8px 12px;
-        margin-top: 6px;
-        line-height: 1.7;
-    }
-    .hint-block .label { color: #8B949E; }
-    .hint-block code   { color: var(--red); }
     .sql-out {
         font-family: var(--mono);
         font-size: 12px;
         color: #79C0FF;
         line-height: 1.6;
+        word-break: break-word;
     }
     .sql-prompt { color: var(--text-muted); }
+
+    .demo-btn-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .demo-btn {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        padding: 8px 10px;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        transition: border-color 0.12s, color 0.12s;
+    }
+    .demo-btn:hover {
+        border-color: var(--red);
+        color: var(--red);
+    }
+    .demo-btn.valid:hover {
+        border-color: var(--green);
+        color: var(--green);
+    }
+    .demo-btn .title {
+        display: block;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 2px;
+    }
+    .demo-btn code {
+        color: var(--red);
+    }
+    .demo-btn.valid code {
+        color: var(--green);
+    }
 </style>
 {% endblock %}
 
@@ -44,14 +76,14 @@
     <div class="panel">
         <div class="panel-header"><div class="dot"></div>đăng nhập</div>
         <div class="panel-body">
-            <form action="{{ url_for('login') }}" method="POST">
+            <form id="loginForm" action="{{ url_for('login') }}" method="POST">
                 <div class="field">
                     <label>username</label>
-                    <input type="text" name="username" value="{{ username or '' }}" placeholder="nhập tài khoản..." required>
+                    <input type="text" id="usernameInput" name="username" value="{{ username or '' }}" placeholder="nhập tài khoản..." required>
                 </div>
                 <div class="field">
                     <label>password</label>
-                    <input type="password" name="password" placeholder="nhập mật khẩu..." required>
+                    <input type="text" id="passwordInput" name="password" placeholder="nhập mật khẩu..." required>
                 </div>
                 <button class="btn btn-primary" type="submit" style="width:100%;text-align:center">đăng nhập</button>
             </form>
@@ -71,15 +103,32 @@
     {% endif %}
 
     <div class="panel" style="margin-top:12px">
-        <div class="panel-header"><div class="dot"></div>// kịch bản bypass login</div>
+        <div class="panel-header"><div class="dot"></div>// kịch bản bypass login (bấm để chạy thử)</div>
         <div class="panel-body">
-            <div class="hint-block">
-                <span class="label">username:</span> <code>admin' --</code><br>
-                <span class="label">password:</span> <code>bất kỳ</code><br>
-                <span class="label">// kết quả:</span> đăng nhập thành công, bỏ qua kiểm tra mật khẩu
+            <div class="demo-btn-list">
+                <button type="button" class="demo-btn" onclick="fillAndSubmit(`admin' --`, `123`)">
+                    <span class="title">1. Bypass bằng Comment SQL (Chiếm quyền Admin)</span>
+                    user: <code>admin' --</code> &nbsp;|&nbsp; pass: <code>123</code>
+                </button>
+                <button type="button" class="demo-btn" onclick="fillAndSubmit(`' OR 1=1 --`, `bat_ky`)">
+                    <span class="title">2. Bypass bằng Tautology (Không cần biết tên TK)</span>
+                    user: <code>' OR 1=1 --</code> &nbsp;|&nbsp; pass: <code>bat_ky</code>
+                </button>
+                <button type="button" class="demo-btn valid" onclick="fillAndSubmit(`sv_nam`, `123456`)">
+                    <span class="title">3. Đăng nhập hợp lệ (Tài khoản sinh viên mẫu)</span>
+                    user: <code>sv_nam</code> &nbsp;|&nbsp; pass: <code>123456</code>
+                </button>
             </div>
         </div>
     </div>
 
 </div>
+
+<script>
+function fillAndSubmit(u, p) {
+    document.getElementById('usernameInput').value = u;
+    document.getElementById('passwordInput').value = p;
+    document.getElementById('loginForm').submit();
+}
+</script>
 {% endblock %}
