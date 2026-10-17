@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ATMMT-9 // SQLi Detection Lab{% endblock %}</title>
+
+    <!-- Inter + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0D1117;
+            --bg-panel:  #161B22;
+            --border:    #30363D;
+            --green:     #7EE787;
+            --red:       #FF7B72;
+            --text:      #E6EDF3;
+            --text-muted:#8B949E;
+            --mono:      'JetBrains Mono', 'IBM Plex Mono', monospace;
+            --sans:      'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Dải trạng thái trên cùng ── */
+        #status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 40px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-family: var(--mono);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        #status-bar .brand {
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: var(--text);
+        }
+        #status-bar .brand span { color: var(--text-muted); }
+
+        /* Đèn LED trạng thái */
+        .led-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .led {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .led.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .led.red   { background: var(--red);   box-shadow: 0 0 6px var(--red);   }
+
+        .status-label {
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+        .status-label.protected { color: var(--green); }
+        .status-label.vulnerable { color: var(--red); }
+
+        /* Nút toggle nhỏ kiểu terminal */
+        .toggle-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 3px 10px;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .toggle-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+        /* Nav links */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 12px;
+            transition: color 0.15s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: var(--text); }
+
+        .nav-sep { color: var(--border); }
+
+        /* ── Main ── */
+        main {
+            flex: 1;
+            padding: 24px 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ── Panel (thay card) ── */
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+        }
+        .panel-header {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-header .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+        .panel-body { padding: 14px; }
+
+        /* ── Flash messages ── */
+        .flash-list { margin-bottom: 16px; }
+        .flash {
+            padding: 9px 14px;
+            border-left: 3px solid var(--border);
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-family: var(--mono);
+            background: var(--bg-panel);
+        }
+        .flash.success { border-color: var(--green); color: var(--green); }
+        .flash.danger  { border-color: var(--red);   color: var(--red);   }
+        .flash.info    { border-color: var(--border); color: var(--text-muted); }
+
+        /* ── Footer ── */
+        footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* ── Utilities ── */
+        .mono { font-family: var(--mono); }
+        .text-green  { color: var(--green); }
+        .text-red    { color: var(--red); }
+        .text-muted  { color: var(--text-muted); }
+        .text-sm     { font-size: 12px; }
+
+        input[type="text"], input[type="password"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 7px 10px;
+            width: 100%;
+            outline: none;
+            border-radius: 2px;
+            transition: border-color 0.15s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--green);
+        }
+
+        .btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            padding: 6px 14px;
+            cursor: pointer;
+            border-radius: 2px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .btn:hover { background: var(--border); }
+        .btn-primary {
+            border-color: var(--green);
+            color: var(--green);
+        }
+        .btn-primary:hover { background: rgba(126,231,135,0.08); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(48,54,61,0.5);
+            vertical-align: middle;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(48,54,61,0.3); }
+
+        /* ── 403 bounce ── */
+        @keyframes bounce-in {
+            0%   { transform: scale(0.97); opacity: 0.6; }
+            60%  { transform: scale(1.02); }
+            100% { transform: scale(1);    opacity: 1; }
+        }
+        .bounce { animation: bounce-in 0.35s ease-out; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Thanh trạng thái ── -->
+<div id="status-bar">
+    <div class="brand">ATMMT-9 <span>// SQLi Detection Lab</span></div>
+
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>~/search</a>
+        <a href="{{ url_for('login') }}" {% if request.endpoint == 'login' %}class="active"{% endif %}>~/login</a>
+        <a href="{{ url_for('admin') }}" {% if request.endpoint == 'admin' %}class="active"{% endif %}>~/admin</a>
+        {% if session.get('username') %}
+            <span class="nav-sep">|</span>
+            <span style="color:var(--text-muted)">{{ session.get('username') }}</span>
+            <a href="{{ url_for('logout') }}" style="color:var(--red)">logout</a>
+        {% endif %}
+    </div>
+
+    <div class="led-wrap">
+        <span class="led {{ 'green' if security_mode == 'PROTECTED' else 'red' }}"></span>
+        {% if security_mode == 'PROTECTED' %}
+            <span class="status-label protected">SYS: PROTECTED</span>
+        {% else %}
+            <span class="status-label vulnerable">SYS: VULNERABLE</span>
+        {% endif %}
+        <form action="{{ url_for('toggle_mode') }}" method="POST" style="margin:0">
+            <button class="toggle-btn" type="submit">[ toggle ]</button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Nội dung ── -->
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-list">
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    Đồ án An toàn mạng máy tính — Đề tài 9 — Đại học Công Thương TP.HCM (HUIT)
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

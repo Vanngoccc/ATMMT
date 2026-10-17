@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}~/login — ATMMT-9{% endblock %}
+
+{% block head %}
+<style>
+    .login-wrap {
+        max-width: 420px;
+        margin: 40px auto 0;
+    }
+    .field { margin-bottom: 12px; }
+    .field label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+        letter-spacing: 0.3px;
+    }
+    .hint-block {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+        border-left: 2px solid var(--border);
+        padding: 8px 12px;
+        margin-top: 6px;
+        line-height: 1.7;
+    }
+    .hint-block .label { color: #8B949E; }
+    .hint-block code   { color: var(--red); }
+    .sql-out {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: #79C0FF;
+        line-height: 1.6;
+    }
+    .sql-prompt { color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+
+    <div class="panel">
+        <div class="panel-header"><div class="dot"></div>đăng nhập</div>
+        <div class="panel-body">
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="field">
+                    <label>username</label>
+                    <input type="text" name="username" value="{{ username or '' }}" placeholder="nhập tài khoản..." required>
+                </div>
+                <div class="field">
+                    <label>password</label>
+                    <input type="password" name="password" placeholder="nhập mật khẩu..." required>
+                </div>
+                <button class="btn btn-primary" type="submit" style="width:100%;text-align:center">đăng nhập</button>
+            </form>
+        </div>
+    </div>
+
+    {% if sql_executed %}
+    <div class="panel" style="margin-top:12px">
+        <div class="panel-header"><div class="dot"></div>query thực thi</div>
+        <div class="panel-body">
+            <div class="sql-out"><span class="sql-prompt">db&gt; </span>{{ sql_executed }}</div>
+            {% if sql_error %}
+                <div style="color:var(--red);font-family:var(--mono);font-size:12px;margin-top:6px">// ERROR: {{ sql_error }}</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="panel" style="margin-top:12px">
+        <div class="panel-header"><div class="dot"></div>// kịch bản bypass login</div>
+        <div class="panel-body">
+            <div class="hint-block">
+                <span class="label">username:</span> <code>admin' --</code><br>
+                <span class="label">password:</span> <code>bất kỳ</code><br>
+                <span class="label">// kết quả:</span> đăng nhập thành công, bỏ qua kiểm tra mật khẩu
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

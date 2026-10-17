@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}403 Forbidden — ATMMT-9{% endblock %}
+
+{% block head %}
+<style>
+    .blocked-wrap {
+        max-width: 680px;
+        margin: 40px auto 0;
+    }
+    .alert-panel {
+        border-color: var(--red);
+        border-width: 1px;
+    }
+    .alert-header {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--red);
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--red);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .alert-icon {
+        font-size: 11px;
+        border: 1px solid var(--red);
+        padding: 1px 5px;
+    }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .meta-item { font-family: var(--mono); font-size: 12px; }
+    .meta-item .key   { color: var(--text-muted); display: block; margin-bottom: 2px; font-size: 11px; }
+    .meta-item .val   { color: var(--text); }
+
+    .payload-box {
+        font-family: var(--mono);
+        font-size: 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        color: var(--red);
+        word-break: break-all;
+        line-height: 1.6;
+        margin-bottom: 14px;
+    }
+
+    .rule-list { list-style: none; }
+    .rule-list li {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(48,54,61,0.4);
+        line-height: 1.5;
+    }
+    .rule-list li:last-child { border-bottom: none; }
+    .rule-list .rule-name { color: var(--red); }
+    .rule-list .rule-score { color: #F0883E; margin-left: 8px; }
+
+    .score-big {
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--red);
+    }
+    .score-label { font-size: 11px; color: var(--text-muted); }
+
+    .action-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="blocked-wrap">
+    <div class="panel alert-panel bounce">
+
+        <div class="alert-header">
+            <span class="alert-icon">!</span>
+            HTTP 403 — Request Blocked by SQLi Detection Engine
+        </div>
+
+        <div class="panel-body">
+
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span class="key">// timestamp</span>
+                    <span class="val">{{ log.timestamp }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="key">// client ip</span>
+                    <span class="val">{{ log.client_ip }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="key">// endpoint</span>
+                    <span class="val">{{ log.endpoint }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="key">// risk score</span>
+                    <div class="score-big">{{ log.highest_score }}<span class="score-label">/100</span></div>
+                </div>
+            </div>
+
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-bottom:6px">// payload</div>
+            <div class="payload-box">{{ payload }}</div>
+
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-bottom:8px">// matched rules</div>
+            <ul class="rule-list">
+                {% for threat in log.threats %}
+                    {% for r in threat.matched_rules %}
+                        <li>
+                            <span class="rule-name">[!] {{ r.rule }}</span>
+                            <span class="rule-score">score={{ r.score }}</span>
+                        </li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+
+            <div class="action-row">
+                <a href="{{ url_for('index') }}" class="btn">← quay lại</a>
+                <a href="{{ url_for('admin') }}" class="btn" style="border-color:#58A6FF;color:#58A6FF">→ admin / logs</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
